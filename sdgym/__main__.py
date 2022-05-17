@@ -37,7 +37,9 @@ def _print_table(data, sort=None, reverse=False, format=None):
 
     if format:
         for field, formatter in format.items():
-            data[field] = data[field].apply(formatter)
+            field_data = data[field]
+            not_null = field_data.notnull()
+            data.loc[not_null, field] = field_data[not_null].apply(formatter)
 
     if 'error' in data:
         error = data['error']
@@ -110,7 +112,7 @@ def _run(args):
         scores = scores.groupby(args.groupby).mean().reset_index()
 
     if scores is not None:
-        _print_table(scores)
+        _print_table(scores, format={'model_memory': humanfriendly.format_size})
 
 
 def _download_datasets(args):

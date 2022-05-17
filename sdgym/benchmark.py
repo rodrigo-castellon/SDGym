@@ -4,6 +4,7 @@ import concurrent
 import logging
 import multiprocessing
 import os
+import tracemalloc
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -107,9 +108,15 @@ def _score(synthesizer, metadata, metrics, iteration, output=None, max_rows=None
                     name, metadata.modality, metadata._metadata['name'], iteration, used_memory())
 
         output['error'] = 'Synthesizer Timeout'  # To be deleted if there is no error
+        tracemalloc.start()
         synthetic_data, model_time = _synthesize(synthesizer, real_data.copy(), metadata)
+        peak_memory = tracemalloc.get_traced_memory()[1]
+        tracemalloc.stop()
+        tracemalloc.clear_traces()
+
         output['synthetic_data'] = synthetic_data
         output['model_time'] = model_time.total_seconds()
+        output['model_memory'] = peak_memory
 
         LOGGER.info('Scoring %s on %s dataset %s; iteration %s; %s',
                     name, metadata.modality, metadata._metadata['name'], iteration, used_memory())
@@ -134,7 +141,7 @@ def _score(synthesizer, metadata, metrics, iteration, output=None, max_rows=None
     return output
 
 
-def _score_with_timeout(timeout, synthesizer, metadata, metrics, iteration):
+def _score_in_child(timeout, synthesizer, metadata, metrics, iteration, max_rowsi=None):
     with multiprocessing.Manager() as manager:
         output = manager.dict()
         process = multiprocessing.Process(
@@ -167,11 +174,7 @@ def _run_job(args):
     LOGGER.info('Evaluating %s on %s dataset %s with timeout %ss; iteration %s; %s',
                 name, metadata.modality, dataset_name, timeout, iteration, used_memory())
 
-    if timeout:
-        output = _score_with_timeout(timeout, synthesizer, metadata, metrics, iteration)
-    else:
-        output = _score(synthesizer, metadata, metrics, iteration, max_rows=max_rows)
-
+    output = _score_in_child(timeout, synthesizer, metadata, metrics, iteration, max_rows)
     scores = output.get('scores')
     if not scores:
         scores = pd.DataFrame({'score': [None]})
@@ -183,6 +186,7 @@ def _run_job(args):
     scores.insert(2, 'modality', metadata.modality)
     scores.insert(3, 'iteration', iteration)
     scores['model_time'] = output.get('model_time')
+    scores['model_memory'] = output.get('model_memory')
     scores['run_id'] = run_id
 
     if 'error' in output:
