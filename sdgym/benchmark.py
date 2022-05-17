@@ -142,9 +142,10 @@ def _score(synthesizer, metadata, metrics, iteration, output=None, max_rows=None
 
 
 def _score_in_child(timeout, synthesizer, metadata, metrics, iteration, max_rowsi=None):
-    with multiprocessing.Manager() as manager:
+    context = multiprocessing.get_context('spawn')
+    with context.Manager() as manager:
         output = manager.dict()
-        process = multiprocessing.Process(
+        process = context.Process(
             target=_score,
             args=(synthesizer, metadata, metrics, iteration, output),
         )
