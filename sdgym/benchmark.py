@@ -93,7 +93,7 @@ def _compute_scores(metrics, real_data, synthetic_data, metadata, output):
         output['scores'] = scores  # re-inject list to multiprocessing output
 
 
-def _score(synthesizer, metadata, metrics, iteration, output=None, max_rows=None):
+def _score(synthesizer, metadata, metrics, iteration, max_rows=None, output=None):
     if output is None:
         output = {}
 
@@ -141,7 +141,7 @@ def _score(synthesizer, metadata, metrics, iteration, output=None, max_rows=None
     return output
 
 
-def _score_in_child(timeout, synthesizer, metadata, metrics, iteration, max_rowsi=None):
+def _score_in_child(timeout, synthesizer, metadata, metrics, iteration, max_rows=None):
     try:
         multiprocessing.set_start_method('spawn')
     except RuntimeError:
@@ -151,7 +151,7 @@ def _score_in_child(timeout, synthesizer, metadata, metrics, iteration, max_rows
         output = manager.dict()
         process = multiprocessing.Process(
             target=_score,
-            args=(synthesizer, metadata, metrics, iteration, output),
+            args=(synthesizer, metadata, metrics, iteration, max_rows, output),
         )
 
         process.start()
