@@ -10,10 +10,10 @@ __email__ = 'dailabmit@gmail.com'
 __license__ = 'MIT'
 __version__ = '0.1.0-dev'
 
-from sdgym.benchmark import benchmark
+#from sdgym.benchmark import benchmark
 from sdgym.data import load_dataset
 
 __all__ = [
-    'benchmark',
+#    'benchmark',
     'load_dataset'
 ]
